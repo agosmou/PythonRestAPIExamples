@@ -1,0 +1,130 @@
+openapi: 3.0.0
+info:
+  title: Example Connexion REST API
+  description: |
+    **Welcome** to the *Example Connexion REST API* documentation!
+
+    This API uses a common set of error codes:
+
+    | Status Code      | Description | Reason                             |
+    | ---------------- | ------------| -----------------------------------|
+    | 200              | Success     | Request was successful.  |
+    | 400              | BAD REQUEST | If the request is not valid.       |
+    | 401              | UNAUTHORIZED| If the credentials are invalid.    |
+  version: 0.1.0
+externalDocs:
+  description: Find more info on our GitHub repository
+  url: https://github.com/example/my-fantastic-api
+
+servers:
+  - url: "/0.1"
+
+paths:
+  /users:
+    get:
+      operationId: "users.get_all"
+      tags:
+        - "special tag"
+      summary: Read the list of users
+      description: |
+        Return the list of users. Using this format:
+        ```
+        [
+          {
+            "fname": "value",
+            "lname": "value",
+            "mname": "value",
+            "password": "value",
+            "user_id": id,
+            "username": "value"
+          },
+          {
+            "fname": "value",
+            "lname": "value",
+            "mname": "value",
+            "password": "value",
+            "user_id": id,
+            "username": "value"
+          }
+        ]
+
+        Return an empty list if no user if found.
+        ```
+      responses:
+        "200":
+          description: "Successfully read all users"
+          content:
+            application/json:
+              schema: 
+                type: array 
+                items:
+                  $ref: '#/components/schemas/createUser'
+  /users2:
+    get:
+      x-openapi-router-controller: users
+      operationId: "get_all2"
+      responses:
+        "200":
+          description: "Successfully2 read all users"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/getUser'
+  /user:
+    get:
+      operationId: "users.get"
+      parameters:
+        - name: username
+          description: Return the user with username 
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Successfully found user"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/getUser'
+        "404":
+          description: "User not found"
+  /upload:
+    post:
+      operationId: util.read_file
+      summary: Read UTF-8 file binary, and return content string.
+      requestBody:
+        required: true
+        content:
+          application/octet-stream; charset=utf-8:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Return the received binary content as a string
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    getUser:
+      type: object
+      properties:
+        fname:
+          type: string
+        mname:
+          type: string
+        lname:
+          type: string
+        username:
+          type: string
+
+    createUser:
+      allOf:
+        - $ref: '#/components/schemas/getUser'
+        - type: object
+          properties:
+            password:
+              type: string
