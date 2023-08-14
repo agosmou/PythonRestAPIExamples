@@ -109,7 +109,7 @@ HTTP requests can contain a lot different types of information. A robust framewo
 
 `connexion` can validate query parameters and body content-type, and cast each individual parameter to the correct native python type (`int`, `str`, `float`, `bool`, `list`, `None`, `dict`). If any required parameters are missing, or if any of the type casts fail, then the request will never reach the endpoint.
 
-To enable the validation the parameter types have to be defined. They can be defined as standalone, reusable, schema - or inline with the endpoint declaration. 
+To enable the validation the parameter types have to be defined. They can be defined as standalone, reusable, schema - or inline with the endpoint declaration.
 
 ```yaml
 
@@ -168,13 +168,36 @@ components:
 
 ## [Optional] Validate response json
 
+Behavior is very similar to the request validation. Major difference is that response validation is disabled by default by connexion. Since we have control over response types, response validation is primarily used as a development tool.
+
+`app.add_api('my_api.yaml', validate_responses=True)`
+
 ## Deserialize request json into typed endpoint parameters
+
+Schema is used for more than validation.
 
 ## [Optional] Model object Json serialization and deserialization
 
 Optional because model objects are independent of API input/output parameter schema
 
 ## HTTPS support, to encrypt communications
+
+OpenAPI does allow you to specify a https server URL, but connexion does not use or enforce this information.
+
+HTTPS support is typically enabled using a reverse proxy, such as `nginx`. With this setup `nginx` would be configured with a ssl certificate. `nginx` performs the TLS handshake to establish the session, decrypts requests to send to the application, and encrypts responses sent from the application.
+
+You can enable https support directly (i.e. for development purposes) by passing in a ssl context, but the ssl context is not actually handled by `flask` or `connexion` - it is actually passed directly to the HTTP server [werkzeug](https://connexion.readthedocs.io/en/latest/security.html#id3) by default.
+
+```python
+from OpenSSL import SSL
+context = SSL.Context(SSL.SSLv23_METHOD)
+context.use_privatekey_file('yourserver.key')
+context.use_certificate_file('yourserver.crt')
+# neither connexion nor flask provides a 
+# ssl_context parameter!
+app.run(host='127.0.0.1', port='12344',
+        debug=False/True, ssl_context=context)
+```
 
 ## Request authentication
 
