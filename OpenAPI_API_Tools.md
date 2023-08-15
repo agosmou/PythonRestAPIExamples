@@ -174,11 +174,102 @@ Behavior is very similar to the request validation. Major difference is that res
 
 ## Deserialize request json into typed endpoint parameters
 
-Schema is used for more than validation.
+Schema is used for more than validation. Connexion will also typecast to the correct expected type, so we can add typing to endpoints:
+
+```yaml
+  /typecast:
+    get:
+      operationId: util.typecast
+      summary: Check that entpoint parameters are typecasted to their schema definition
+      parameters:
+        - name: a_string
+          in: query
+          description: A string parameter.
+          required: true
+          schema:
+            type: string
+          
+        - name: an_integer
+          in: query
+          description: An integer parameter.
+          required: true
+          schema:
+            type: integer
+
+        - name: a_float
+          in: query
+          description: A floating point parameter.
+          required: true
+          schema:
+            type: number
+            format: float
+
+        - name: a_boolean
+          in: query
+          description: A boolean parameter.
+          required: true
+          schema:
+            type: boolean
+
+      responses:
+          '200':
+            description: Parameters received and types are correct.
+```
+
+```python
+def typecast(a_string: str, an_integer: int, a_float: float, a_boolean: bool):
+    if not isinstance(a_string, str):
+        raise TypeError("Parameter 'a_string' should be of type string.")
+    
+    if not isinstance(an_integer, int):
+        raise TypeError("Parameter 'an_integer' should be of type integer.")
+    
+    if not isinstance(a_float, float):
+        raise TypeError("Parameter 'a_float' should be of type float.")
+    
+    if not isinstance(a_boolean, bool):
+        raise TypeError("Parameter 'a_boolean' should be of type boolean.")
+    
+    return "Parameters received and types are correct."
+```
 
 ## [Optional] Model object Json serialization and deserialization
 
-Optional because model objects are independent of API input/output parameter schema
+Connexion does not directly support model object serialization/deserialization. There is a good reason for this - the model schema and OpenAPI schema are not necessarily the same. OpenAPI schema defines how requests and responses should be formatted, and model schema define how the data is structured within the database. These schema should be independent of one another so that the database design can change without needing to alter the API specification.
+
+The marshmallow library does, however, provide all of this capability and the `flask_marshmallow` module provides seamless integration.
+
+```python
+from flask_marshmallow import Marshmallow
+from flask_sqlalchemy import SQLAlchemy
+
+app = connex_app.app
+
+db = SQLAlchemy(app)
+ma = Marshmallow(app)
+
+class User(db.Model):
+    __tablename__ = "users"
+    user_id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(32))
+    password = db.Column(db.String(32))
+    fname = db.Column(db.String(32))
+    mname = db.Column(db.String(32))
+    lname = db.Column(db.String(32))
+
+class UserSchema(ma.SQLAlchemyAutoSchema):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+    
+    class Meta:
+        model = User
+        sqla_session = db.session
+
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+
+# user_schema.dump(user) will serialize User
+```
 
 ## HTTPS support, to encrypt communications
 
@@ -199,13 +290,85 @@ app.run(host='127.0.0.1', port='12344',
         debug=False/True, ssl_context=context)
 ```
 
-## Request authentication
+## Request authentication & Endpoint role based access
 
-## Endpoint role based access
+### Connexion
+
+It is easy to specify authentication methods using OpenAPI. Connexion supports 1) api key auth, 2) username/password, 3) oAuth, and 4) jwt. The specification clearly defines how authentication credentials should be passed, and the authentication requirements can be applied to all or some endpoints.
+
+There are a few limitations:
+* OpenAPI specification outlines the authentication interface - the actual implementation is still up to us
+* OpenAPI specification only supports `scopes` for oAuth. Connexion follows the OpenAPI spec, so it also does not provide roles for non-oAuth methods
+  * This means that only oAuth authentication callbacks receive the `required_scopes` kwarg
+  * Basic authentication can still provide scopes - but the scopes won't be captured on the OpenAPI spec w/o special logic
+
+```yaml
+  /users:
+    get:
+      operationId: "users.get_all"
+      security:
+        - FancyOath: [write] # only oAuth supports roles
+        - FancyApiKeyAuth: [] # we may be able to add roles to other methods using middleware
+        - UserPass: []
+
+components:
+  securitySchemes:
+    FancyApiKeyAuth:      
+      type: apiKey
+      in: header      
+      name: Authorization
+      x-apikeyInfoFunc: auth.verifyToken # specify the authentication callback
+    FancyOath: # Example does not work in demo app yet
+      type: oauth2
+      x-tokenInfoFunc: auth.verifyToken
+      flows:
+        implicit:
+          authorizationUrl: http://127.0.0.1:8000/0.1/auth
+          scopes:
+            read: Allow to read 
+            write: Allow to write 
+            wildcard: Extreme Access
+    UserPass:
+      type: http
+      scheme: basic
+      x-basicInfoFunc: auth.verifyUserPass
+```
+
+```python
+# auth.py
+def verifyUserPass(username, password, required_scopes):
+    ## required_scopes always None!
+    user = User.query.filter(User.username==username).one_or_none()
+    if user and user.password == password:
+        return {
+            "scope": "read write"
+        }
+    return None
+
+def verifyToken(token_string, required_scopes):
+    '''
+    At a minimum this function should return
+    the authenticated scope for token_string. 
+    In practice, however, we should return a dict
+    that complies with RFC 7662
+    https://datatracker.ietf.org/doc/html/rfc7662
+    '''
+    ## required_scopes always None!
+    if token_string == "read-token":
+        return {
+            "scope": ["read"]
+        }
+    elif token_string == "write-token":
+        return {
+            "scope": "read write"
+        }
+    else:
+        return None
+```
 
 ## [Optional] Swagger UI for easy debugging
 
-## Connexion
+### Connexion
 
 Swagger UI will 'just work' if the optional swagger dependency is specified and we add a yaml open api specification. `connexion` creates the swagger UI doc using the OpenAPI yaml file.
 
@@ -222,7 +385,7 @@ The OpenAPI spec has some optional fields that can be used to provide more detai
 
 ![example-swagger](example_swagger.png)
 
-## Flask
+### Flask
 
 `swagger` is a standalone tool, and we can use it without `connexion` if we properly define our API. This typically requires writing the api specification, but there are some tools to help.
 
@@ -263,31 +426,3 @@ def get_item(item_id):
     """
     return jsonify({"id": item_id, "name": "Example Item"})
 ```
-
-## Overview
-
-Options:
-
-1. spec-first with connexion.
-   * Response and request schema declared directly in yaml 
-
-Compare connexion with another popular python API tool. Need to understand their feature set overlap. We should also create some demos to show how to setup simple APIs using both frameworks.
-
-## Questions
-
-### What is OpenAPI?
-
-### Marshmellow + SQLAlchemy
-
-Here’s an example using Flask SQLAlchemy and Marshmallow
-https://marshmallow.readthedocs.io/en/stable/examples.html#quotes-api-flask-sqlalchemy
-
-### Flasgger
-
-https://github.com/flasgger/flasgger
-
-### Connexion
-
-https://connexion.readthedocs.io/en/latest/
-
-## Conclusion

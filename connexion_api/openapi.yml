@@ -23,6 +23,10 @@ paths:
   /users:
     get:
       operationId: "users.get_all"
+      security:
+        - FancyOath: [write]
+        - FancyApiKeyAuth: []
+        - UserPass: []
       tags:
         - "special tag"
       summary: Read the list of users
@@ -107,7 +111,64 @@ paths:
             text/plain:
               schema:
                 type: string
+  /typecast:
+    get:
+      operationId: util.typecast
+      summary: Check that entpoint parameters are typecasted to their schema definition
+      parameters:
+        - name: a_string
+          in: query
+          description: A string parameter.
+          required: true
+          schema:
+            type: string
+          
+        - name: an_integer
+          in: query
+          description: An integer parameter.
+          required: true
+          schema:
+            type: integer
+
+        - name: a_float
+          in: query
+          description: A floating point parameter.
+          required: true
+          schema:
+            type: number
+            format: float
+
+        - name: a_boolean
+          in: query
+          description: A boolean parameter.
+          required: true
+          schema:
+            type: boolean
+
+      responses:
+          '200':
+            description: Parameters received and types are correct.
 components:
+  securitySchemes:
+    FancyApiKeyAuth:      
+      type: apiKey
+      in: header      
+      name: Authorization
+      x-apikeyInfoFunc: auth.verifyToken
+    FancyOath:
+      type: oauth2
+      x-tokenInfoFunc: auth.verifyToken
+      flows:
+        implicit:
+          authorizationUrl: http://127.0.0.1:8000/0.1/auth
+          scopes:
+            read: Allow to read 
+            write: Allow to write 
+            wildcard: Extreme Access
+    UserPass:
+      type: http
+      scheme: basic
+      x-basicInfoFunc: auth.verifyUserPass
   schemas:
     getUser:
       type: object

@@ -1,6 +1,6 @@
 from models import User, user_schema, users_schema
 
-def get_all():
+def get_all(*args, **kwargs):
     users = User.query.all()
     return users_schema.dump(users)
 
