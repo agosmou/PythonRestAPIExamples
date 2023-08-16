@@ -1,17 +1,40 @@
-# Open API Tools
+# OpenAPI Tools
 
 ## Requirements
+
+Must have:
 
 * Route requests to endpoint functions
 * Validate request json
 * [Optional] Validate response json
 * Deserialize request json into typed endpoint parameters
+* Request authentication
+* Endpoint role based access --> Weakest (only provides oAUTH)
+* [Optional] Swagger UI for easy debugging
+
+Not needed:
 * [Optional] Model object Json serialization and deserialization
   * Optional because model objects are independent of API input/output parameter schema
 * HTTPS support, to encrypt communications
-* Request authentication
-* Endpoint role based access
-* [Optional] Swagger UI for easy debugging
+
+## HTTPS support, to encrypt communications
+
+OpenAPI does allow you to specify a https server URL, but connexion does not use or enforce this information.
+
+HTTPS support is typically enabled using a reverse proxy, such as `nginx`. With this setup `nginx` would be configured with a ssl certificate. `nginx` performs the TLS handshake to establish the session, decrypts requests to send to the application, and encrypts responses sent from the application.
+
+You can enable https support directly (i.e. for development purposes) by passing in a ssl context, but the ssl context is not actually handled by `flask` or `connexion` - it is actually passed directly to the HTTP server [werkzeug](https://connexion.readthedocs.io/en/latest/security.html#id3) by default.
+
+```python
+from OpenSSL import SSL
+context = SSL.Context(SSL.SSLv23_METHOD)
+context.use_privatekey_file('yourserver.key')
+context.use_certificate_file('yourserver.crt')
+# neither connexion nor flask provides a 
+# ssl_context parameter!
+app.run(host='127.0.0.1', port='12344',
+        debug=False/True, ssl_context=context)
+```
 
 ## Request Routing
 
@@ -269,25 +292,6 @@ user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 
 # user_schema.dump(user) will serialize User
-```
-
-## HTTPS support, to encrypt communications
-
-OpenAPI does allow you to specify a https server URL, but connexion does not use or enforce this information.
-
-HTTPS support is typically enabled using a reverse proxy, such as `nginx`. With this setup `nginx` would be configured with a ssl certificate. `nginx` performs the TLS handshake to establish the session, decrypts requests to send to the application, and encrypts responses sent from the application.
-
-You can enable https support directly (i.e. for development purposes) by passing in a ssl context, but the ssl context is not actually handled by `flask` or `connexion` - it is actually passed directly to the HTTP server [werkzeug](https://connexion.readthedocs.io/en/latest/security.html#id3) by default.
-
-```python
-from OpenSSL import SSL
-context = SSL.Context(SSL.SSLv23_METHOD)
-context.use_privatekey_file('yourserver.key')
-context.use_certificate_file('yourserver.crt')
-# neither connexion nor flask provides a 
-# ssl_context parameter!
-app.run(host='127.0.0.1', port='12344',
-        debug=False/True, ssl_context=context)
 ```
 
 ## Request authentication & Endpoint role based access
