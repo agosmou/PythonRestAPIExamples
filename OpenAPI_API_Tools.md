@@ -1,4 +1,28 @@
-# OpenAPI Tools
+# Connexion evaluation
+
+## Summary
+
+`connexion` supports all of the essential features needed by an HTTP request handling framework.
+
+Of the required features outlined below, the support for role based access is the weakest. This is because the OpenAPI specification only allows role-based access for OAuth security schemes. `connexion` mirrors the OpenAPI specification, so they also do not provide the capability to validate endpoint scopes for basic/JWT/apiKey based authentication schemes.
+
+This shortcoming can be overcome in at least two ways:
+
+1) hard-code the role validation into each endpoint (i.e. add logic to each endpoint that check's the user's role before responding)
+2) add middleware to parse the roles for non-OAuth schemes, and pass the required role to the authentication validation methods. `connexion` purposefully does not populate the required roles to stay consistent with OpenAPI, but we should be able to add it.
+
+The second largest shortcoming that comes with using `connexion` is that developers must also learn how to write and interpret OpenAPI specifications. This does require a several hours of study to properly master, but alternative libraries appear to have similar cognitive loads. Libraries such as `Flassger` work by moving OpenAPI specifications into the docstrings, and other frameworks work by generating OpenAPI specifications from code. Both of these approaches require a comparable understanding API design - but they use comments and code logic instead of yaml declarations.
+
+It is also worth noting that `connexion` does not require all endpoints to use the OpenAPI specification. Native flask endpoint routing will continue to work if the endpoint is omitted from the specifications. This means that endpoints can be quickly setup for development purposes by simply appending the `@app.route` decorator to any python method.
+
+### Tools to help write API specifications
+
+These tools may make writing OpenAPI specifications easier. I've tried using the VS Code OpenAPI editor and it works quite well.
+
+* [Online Swagger UI editor1](https://editor.swagger.io/)
+* [VS Code OpenAPI (Swagger) Editor](https://marketplace.visualstudio.com/items?itemName=42Crunch.vscode-openapi)
+  * Requires free account to use
+* [REST API Design Guidelines](https://opensource.zalando.com/restful-api-guidelines/#table-of-contents)
 
 ## Requirements
 
