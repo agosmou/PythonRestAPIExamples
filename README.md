@@ -12,7 +12,7 @@ This should start the demo api using a development server on `http://127.0.0.1:8
 See `http://127.0.0.1:8000/0.1/ui` for the Swagger UI.
 
 # Notes
-- [Original Architecture Analysis and Discovery by Joshua Douglas](https://github.com/Joshua-Douglas/PythonRestAPIExamples/blob/main/OpenAPI_API_Tools.md)
+- [Original Architecture Analysis and Discovery by Joshua Douglas](https://github.com/Joshua-Douglas/PythonRestAPIExamples/blob/main/OpenAPI_API_Tools.md) 
 - [Home Unite Us](https://github.com/hackforla/HomeUniteUs)
 - Architectural Decision Record [ADR](https://github.com/joelparkerhenderson/architecture-decision-record/tree/main/locales/en/templates/decision-record-template-by-michael-nygard)
 - [Connexion Library](https://github.com/spec-first/connexion)
